@@ -1,0 +1,129 @@
+@page "/booking"
+@implements IDisposable
+@using BlazorAsyncFormValidationWebAssembly.Client.Models
+@using Microsoft.AspNetCore.Components.Forms
+
+<PageTitle>Booking</PageTitle>
+
+<h1>Booking availability</h1>
+
+<p>Submit the form to validate the selected combination against a delayed availability check.</p>
+
+<EditForm EditContext="editContext" method="post" FormName="booking-form" OnValidSubmit="HandleValidSubmit" OnInvalidSubmit="HandleInvalidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-4">
+            <label class="form-label" for="destination">Destination</label>
+            <InputSelect id="destination" class="form-select" @bind-Value="booking.Destination">
+                <option>Lisbon</option>
+                <option>Paris</option>
+                <option>Seattle</option>
+                <option>Tokyo</option>
+            </InputSelect>
+            <ValidationMessage For="() => booking.Destination" />
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label" for="roomType">Room type</label>
+            <InputSelect id="roomType" class="form-select" @bind-Value="booking.RoomType">
+                <option>Standard</option>
+                <option>Deluxe</option>
+                <option>Suite</option>
+            </InputSelect>
+            <ValidationMessage For="() => booking.RoomType" />
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label" for="checkInDate">Check-in date</label>
+            <InputDate id="checkInDate" class="form-control" @bind-Value="booking.CheckInDate" />
+            <ValidationMessage For="() => booking.CheckInDate" />
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label" for="nights">Nights</label>
+            <InputNumber id="nights" class="form-control" @bind-Value="booking.Nights" />
+            <ValidationMessage For="() => booking.Nights" />
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label" for="guests">Guests</label>
+            <InputNumber id="guests" class="form-control" @bind-Value="booking.Guests" />
+            <ValidationMessage For="() => booking.Guests" />
+        </div>
+    </div>
+
+    @if (IsValidationPending)
+    {
+        <p class="text-info">Availability check is in progress. Please wait...</p>
+    }
+
+    <button class="btn btn-primary" type="submit" disabled="@IsValidationPending">Check availability</button>
+</EditForm>
+
+@if (!string.IsNullOrWhiteSpace(submitOutcome))
+{
+    <p class="mt-3 fw-semibold">@submitOutcome</p>
+}
+
+@code {
+    [SupplyParameterFromForm(FormName = "booking-form")]
+    private BookingRequest? postedBooking { get; set; }
+
+    private BookingRequest booking = new();
+    private EditContext? editContext;
+    private string? submitOutcome;
+    private bool IsValidationPending => editContext?.IsValidationPending() ?? false;
+
+    protected override void OnParametersSet()
+    {
+        booking = postedBooking ?? booking;
+
+        if (editContext is not null && ReferenceEquals(editContext.Model, booking))
+        {
+            return;
+        }
+
+        if (editContext is not null)
+        {
+            editContext.OnFieldChanged -= HandleFieldChanged;
+            editContext.OnValidationStateChanged -= HandleValidationStateChanged;
+        }
+
+        editContext = new EditContext(booking);
+        editContext.OnFieldChanged += HandleFieldChanged;
+        editContext.OnValidationStateChanged += HandleValidationStateChanged;
+    }
+
+    private Task HandleValidSubmit(EditContext _)
+    {
+        submitOutcome = $"Booking accepted for {booking.Destination} ({booking.RoomType}) starting {booking.CheckInDate:yyyy-MM-dd}.";
+        return Task.CompletedTask;
+    }
+
+    private Task HandleInvalidSubmit(EditContext _)
+    {
+        submitOutcome = "Booking rejected. Update the selection and submit again.";
+        return Task.CompletedTask;
+    }
+
+    private void HandleFieldChanged(object? sender, FieldChangedEventArgs e)
+    {
+        submitOutcome = null;
+    }
+
+    private void HandleValidationStateChanged(object? sender, ValidationStateChangedEventArgs e)
+    {
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        if (editContext is not null)
+        {
+            editContext.OnFieldChanged -= HandleFieldChanged;
+            editContext.OnValidationStateChanged -= HandleValidationStateChanged;
+        }
+    }
+}
