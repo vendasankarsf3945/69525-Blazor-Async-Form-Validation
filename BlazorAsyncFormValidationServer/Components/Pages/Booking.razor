@@ -68,7 +68,7 @@
 }
 
 @code {
-    [SupplyParameterFromForm(FormName = "booking-form")]
+    [SupplyParameterFromForm(FormName = "booking-form", Name = "booking")]
     private BookingRequest? postedBooking { get; set; }
 
     private BookingRequest booking = new();
